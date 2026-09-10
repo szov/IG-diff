@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pyc
+
+# secrets / local state
+.env
+profiles/
+output/*
+!output/.gitkeep
+downloaded_files/*
+!downloaded_files/.gitkeep
+logs/*.log
+*.log
+dashboard_data.json
+*.lock
+!uv.lock
+
+# ide
+.idea/
+.vscode/

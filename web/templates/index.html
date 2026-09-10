@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IG Insights</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.1/vanilla-tilt.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-dark: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --accent-pink: #e879a0;
+            --accent-green: #6dd5a0;
+            --text-muted: #666;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: #e5e5e5;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .receipt-card {
+            background: var(--bg-card);
+            color: #fff;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid #2a2a2a;
+            transition: border-color 0.2s;
+        }
+        
+        .receipt-card:hover {
+            border-color: #333;
+        }
+
+        .btn-main {
+            background: #2a2a2a;
+            color: #fff;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.875rem;
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.2s;
+            cursor: pointer;
+            opacity: 0;
+            border: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-main:hover {
+            background: #333;
+            border-color: #444;
+        }
+
+        .btn-main:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+        .tag { font-size: 0.75rem; padding: 4px 10px; border-radius: 4px; font-weight: 500; }
+        .tag-pink { background: rgba(232, 121, 160, 0.15); color: var(--accent-pink); }
+        .tag-green { background: rgba(109, 213, 160, 0.15); color: var(--accent-green); }
+
+        .at-symbol { color: #666; font-weight: 400; }
+
+        /* Status Pill */
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: var(--text-muted);
+            opacity: 0; 
+            transition: all 0.3s ease;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background-color: #666;
+        }
+
+        .status-pill.active { opacity: 1; }
+        
+        .status-pill.running {
+            border-color: #d97706;
+            color: #fbbf24;
+            background: rgba(217, 119, 6, 0.1);
+        }
+        .status-pill.running .status-dot {
+            background-color: #fbbf24;
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-pill.success {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+            background: rgba(109, 213, 160, 0.1);
+        }
+        .status-pill.success .status-dot {
+            background-color: var(--accent-green);
+        }
+
+        .status-pill.error {
+            border-color: var(--accent-pink);
+            color: var(--accent-pink);
+            background: rgba(232, 121, 160, 0.1);
+        }
+        .status-pill.error .status-dot {
+            background-color: var(--accent-pink);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body class="p-6 md:p-12">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-12 flex flex-col md:flex-row justify-between items-end gap-6">
+            <div>
+                <div class="header-content">
+                    <h1 class="text-3xl md:text-4xl font-semibold tracking-tight">IG Insights</h1>
+                    <div id="status-pill" class="status-pill">
+                        <div class="status-dot"></div>
+                        <span id="status-text">Idle</span>
+                    </div>
+                </div>
+                <p class="text-gray-500 text-sm">A simple breakdown of your follower connections.</p>
+            </div>
+            <button id="runBtn" onclick="runScript()" class="btn-main">
+                <svg id="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>
+                <span>Update Data</span>
+            </button>
+        </header>
+
+        <div id="dashboard" class="grid grid-cols-1 lg:grid-cols-2 gap-8 opacity-0 translate-y-10">
+            <!-- Traitors Card -->
+            <div class="receipt-card" data-tilt data-tilt-max="2" data-tilt-speed="400" data-tilt-glare="true" data-tilt-max-glare="0.05">
+                <div class="flex justify-between items-start mb-6 border-b border-gray-800 pb-4">
+                    <div>
+                        <h2 class="text-lg font-medium">Not Following Back</h2>
+                        <p class="text-xs text-gray-500 mt-1">People you follow who don't follow you.</p>
+                    </div>
+                    <span id="count-traitors" class="text-2xl font-semibold text-white">0</span>
+                </div>
+                <ul id="list-traitors" class="h-[500px] overflow-y-auto custom-scroll space-y-2"></ul>
+            </div>
+
+            <!-- Fans Card -->
+            <div class="receipt-card" data-tilt data-tilt-max="2" data-tilt-speed="400" data-tilt-glare="true" data-tilt-max-glare="0.05">
+                <div class="flex justify-between items-start mb-6 border-b border-gray-800 pb-4">
+                    <div>
+                        <h2 class="text-lg font-medium">Fans</h2>
+                        <p class="text-xs text-gray-500 mt-1">People who follow you that you don't follow back.</p>
+                    </div>
+                    <span id="count-fans" class="text-2xl font-semibold text-white">0</span>
+                </div>
+                <ul id="list-fans" class="h-[500px] overflow-y-auto custom-scroll space-y-2"></ul>
+            </div>
+        </div>
+
+        <footer class="mt-20 text-center text-gray-600 text-xs">
+            IG Analytics Tool &copy; 2026 <span id="last-updated" class="ml-2 text-gray-500"></span>
+            <br><a href="#" onclick="localStorage.removeItem('ig_api_key');location.reload()" class="text-gray-500 hover:text-gray-400 mt-2 inline-block">Change API key</a>
+        </footer>
+    </div>
+
+    <script>
+        let isRunning = false;
+        const API_KEY = localStorage.getItem("ig_api_key") || "";
+
+        if (!API_KEY) {
+            const key = prompt("Enter API key:");
+            if (key) {
+                localStorage.setItem("ig_api_key", key);
+                location.reload();
+            }
+        }
+
+        function getUrl(url) {
+            return `${url}?key=${encodeURIComponent(localStorage.getItem("ig_api_key") || "")}`;
+        }
+
+        function initTilt() {
+            VanillaTilt.init(document.querySelectorAll(".receipt-card"), {
+                max: 3,
+                speed: 400,
+                glare: true,
+                "max-glare": 0.05,
+            });
+        }
+
+        function updateStatus(state, stage, message) {
+            const pill = document.getElementById('status-pill');
+            const text = document.getElementById('status-text');
+            const btn = document.getElementById('runBtn');
+            const icon = document.getElementById('refresh-icon');
+
+            // Reset classes
+            pill.className = "status-pill active";
+
+            if (state === 'running') {
+                pill.classList.add('running');
+
+                // Show stage-specific messages
+                const stageMessages = {
+                    'starting': 'Starting...',
+                    'processing': 'Processing export...',
+                    'analyzing': 'Computing results...'
+                };
+
+                text.innerText = stageMessages[stage] || message || "Processing...";
+
+                // Button State
+                btn.disabled = true;
+                btn.querySelector('span').innerText = "Running...";
+
+                // Kill any existing animation before starting new one
+                gsap.killTweensOf(icon);
+                gsap.to(icon, { rotation: 360, repeat: -1, duration: 1, ease: "linear" });
+
+            } else if (state === 'done') {
+                pill.classList.add('success');
+                text.innerText = message || "Updated just now";
+
+                // Button State
+                btn.disabled = false;
+                btn.querySelector('span').innerText = "Update Data";
+                gsap.killTweensOf(icon);
+                gsap.set(icon, { rotation: 0 });
+
+            } else if (state === 'error') {
+                pill.classList.add('error');
+                text.innerText = message;
+
+                // Button State
+                btn.disabled = false;
+                btn.querySelector('span').innerText = "Try Again";
+                gsap.killTweensOf(icon);
+                gsap.set(icon, { rotation: 0 });
+            }
+        }
+
+        async function runScript() {
+            if (isRunning) return;
+            isRunning = true;
+
+            updateStatus('running', 'starting', "Initializing...");
+            await fetch(getUrl('/trigger'), { method: 'POST' });
+
+            // Start polling
+            pollData();
+        }
+
+        async function pollData() {
+            try {
+                const response = await fetch(getUrl('/data'));
+                const data = await response.json();
+
+                if (data.status === 'running') {
+                    // Update with stage and message
+                    updateStatus('running', data.stage, data.message);
+                    setTimeout(pollData, 1000); // Poll every second
+
+                } else if (data.status === 'done') {
+                    isRunning = false;
+                    renderDashboard(data);
+                    updateStatus('done', 'complete', data.message || "Updated just now");
+
+                } else if (data.status === 'error') {
+                    isRunning = false;
+                    updateStatus('error', 'error', data.message);
+
+                } else {
+                    // Idle or initial state
+                    if (isRunning) setTimeout(pollData, 1000);
+                }
+            } catch (e) {
+                console.error("Poll error:", e);
+                if (isRunning) setTimeout(pollData, 2000);
+            }
+        }
+
+        function updateLastUpdated(data) {
+            const el = document.getElementById('last-updated');
+            if (data && data.updated_at) {
+                const date = new Date(data.updated_at);
+                el.innerText = `Last updated: ${date.toLocaleString()}`;
+            } else {
+                el.innerText = '';
+            }
+        }
+
+        function renderDashboard(data) {
+            const dashboard = document.getElementById('dashboard');
+            dashboard.classList.remove('hidden');
+
+            // Always animate in
+            gsap.to("#dashboard", {
+                opacity: 1,
+                y: 0,
+                duration: 0.8,
+                ease: "power2.out"
+            });
+
+            const fillList = (ulId, countId, items, isTraitor) => {
+                const ul = document.getElementById(ulId);
+                const count = document.getElementById(countId);
+                
+                // Animate number
+                let oldVal = parseInt(count.innerText) || 0;
+                let newVal = items.length;
+                
+                if (oldVal !== newVal) {
+                    gsap.to(count, {
+                        innerText: newVal,
+                        duration: 1.5,
+                        snap: { innerText: 1 },
+                        ease: "power2.out"
+                    });
+                } else {
+                    count.innerText = newVal;
+                }
+
+                ul.innerHTML = "";
+                items.forEach((user) => {
+                    const li = document.createElement('li');
+                    li.className = "flex justify-between items-center p-3 rounded-md hover:bg-white/5 transition-colors group border border-transparent hover:border-white/5";
+                    li.innerHTML = `
+                        <a href="https://instagram.com/${user}" target="_blank" class="flex justify-between items-center w-full">
+                            <span class="text-sm text-gray-400 group-hover:text-white transition-colors"><span class="at-symbol">@</span>${user}</span>
+                            <span class="tag ${isTraitor ? 'tag-pink' : 'tag-green'}">
+                                ${isTraitor ? 'Unfollow' : 'Follow Back'}
+                            </span>
+                        </a>
+                    `;
+                    ul.appendChild(li);
+                });
+
+                // Subtle stagger animation for list items
+                gsap.from(ul.children, {
+                    y: 10,
+                    opacity: 0,
+                    stagger: 0.02,
+                    duration: 0.4,
+                    ease: "power1.out"
+                });
+            };
+
+            fillList('list-traitors', 'count-traitors', data.not_following_back, true);
+            fillList('list-fans', 'count-fans', data.fans, false);
+
+            updateLastUpdated(data);
+            initTilt();
+        }
+
+        window.onload = async () => {
+            // Initial Animations
+            gsap.from("h1", { y: 20, opacity: 0, duration: 0.8, ease: "power2.out" });
+            gsap.from("p", { y: 10, opacity: 0, duration: 0.8, delay: 0.2 });
+            gsap.to("#runBtn", { opacity: 1, duration: 0.5, delay: 0.4, ease: "power2.out" });
+
+            try {
+                const response = await fetch(getUrl('/data'));
+                if (response.status === 401) {
+                    localStorage.removeItem("ig_api_key");
+                    location.reload();
+                    return;
+                }
+                const data = await response.json();
+                
+                // Check if it's already running on load (e.g. page refresh)
+                if (data.status === 'running') {
+                    isRunning = true;
+                    updateStatus('running', data.stage, data.message || "Resuming...");
+                    pollData();
+                } else if (data.status === 'done' || (data.not_following_back && data.not_following_back.length > 0)) {
+                    renderDashboard(data);
+                    updateLastUpdated(data);
+                    updateStatus('done', 'complete', "Data loaded");
+                }
+            } catch (e) {
+                console.log("No initial data found");
+            }
+        };
+    </script>
+</body>
+</html>
